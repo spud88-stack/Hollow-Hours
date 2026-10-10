@@ -44,7 +44,7 @@ export function loadSettings(): Settings {
   } catch {
     /* ignore corrupt storage */
   }
-  return defaultSettings();
+  return sanitizeSettings(defaultSettings());
 }
 
 function saveSettings(s: Settings): void {
