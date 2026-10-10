@@ -493,7 +493,7 @@ function tryGenerate(seed: number, themeId: ThemeId, size: MapSize): GameMap | n
       let free = true;
       for (let dy = -1; dy <= 1 && free; dy++) for (let dx = -1; dx <= 1; dx++) if (m.tiles[(y + dy) * m.w + x + dx] !== FLOOR) free = false;
       if (!free) continue;
-      m.tiles[y * m.w + x] = rng.chance(0.4) ? TALL : LOW;
+      m.tiles[y * m.w + x] = rng.chance(0.25) ? TALL : LOW;
       k++;
     }
   }

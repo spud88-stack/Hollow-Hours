@@ -529,7 +529,7 @@ function jesterOptions(g: Game, m: Meeting, c: Char): Opt[] {
   const rooms = g.map.rooms.filter((r) => r.kind !== 'junction');
   const others = g.aliveChars().filter((x) => x !== c);
   if (g.meetingsHeld < 2) return opts; // behave at first; start stirring later
-  if (m.kind === 'body' && rng.chance(0.15)) opts.push({ p: 60, key: 'where', s: stmt(c.id, 'where', { region: rng.chance(0.6) ? m.region : rng.pick(rooms).id, lie: true }) });
+  if (m.kind === 'body' && rng.chance(0.1)) opts.push({ p: 60, key: 'where', s: stmt(c.id, 'where', { region: rng.chance(0.6) ? m.region : rng.pick(rooms).id, lie: true }) });
   if (others.length && rng.chance(0.08)) opts.push({ p: 65, key: 'accx', s: stmt(c.id, 'accuse', { target: rng.pick(others).id, reason: rng.chance(0.25) ? 'witness' : 'hunch', lie: true }) });
   return opts;
 }

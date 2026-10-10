@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hollow Hours</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+      <div class="hud-tl">
+        <div class="taskbar"><div id="taskfill"></div><span id="tasklabel"></span></div>
+        <div id="tasklist"></div>
+      </div>
+      <div class="hud-tc"><div id="alert"></div></div>
+      <div class="hud-tr">
+        <div id="rolechip"></div>
+        <div id="loc"></div>
+        <div id="alive"></div>
+        <button id="mute" class="ghost small"></button>
+      </div>
+      <div id="toasts"></div>
+      <div id="actions"></div>
+      <div id="spect"></div>
+    </div>
+    <div id="mini"></div>
+    <div id="meeting"></div>
+    <div id="overlay"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -123,6 +123,7 @@ export interface Settings {
   difficulty: Difficulty;
   preferredRole: RoleId | 'random';
   revealRoles: boolean;
+  autoBalance: boolean; // pick kill cooldown and chore count to suit the crowd
 }
 
 export function defaultSettings(): Settings {
@@ -142,6 +143,7 @@ export function defaultSettings(): Settings {
     difficulty: 'normal',
     preferredRole: 'random',
     revealRoles: true,
+    autoBalance: true,
   };
 }
 
@@ -158,6 +160,7 @@ export function sanitizeSettings(s: Settings): Settings {
   o.npcCount = Math.round(clamp(o.npcCount, 3, 20));
   const total = o.npcCount + 1;
   o.murderers = Math.round(clamp(o.murderers, 1, maxMurderers(total)));
+  if (o.autoBalance) Object.assign(o, recommendedRules(o.npcCount, o.murderers, o.size));
   o.killCooldown = clamp(o.killCooldown, 10, 60);
   o.vision = clamp(o.vision, 4, 11);
   o.tasks = Math.round(clamp(o.tasks, 2, 9));
@@ -221,3 +224,34 @@ export const DIFFICULTY: Record<Difficulty, DifficultyTuning> = {
   normal: { memorySpan: 60, evidenceMiss: 0.12, voteShift: 0.25, cunning: 0.8, percInterval: 0.25 },
   hard: { memorySpan: 150, evidenceMiss: 0.02, voteShift: 0.1, cunning: 0.95, percInterval: 0.18 },
 };
+
+/**
+ * One dial for how hard the house leans on the guests: 0 is gentle (slow kills, few chores),
+ * 1 is brutal (fast kills, many chores). Used by auto-balance.
+ */
+export function pressureToRules(x: number): { killCooldown: number; tasks: number } {
+  const v = Math.max(0, Math.min(1, x));
+  return { killCooldown: Math.round(60 - 50 * v), tasks: Math.max(2, Math.min(9, Math.round(3 + 8 * v))) };
+}
+
+// Pressure values found by src/sim/calibrate.ts (all-AI rounds, murderers winning ~38%).
+// Keys are size:murderers:npcCount.
+export const BALANCE: Record<string, number> = {};
+
+export function recommendedRules(npcCount: number, murderers: number, size: MapSize): { killCooldown: number; tasks: number } {
+  const pts: [number, number][] = [];
+  for (const [k, v] of Object.entries(BALANCE)) {
+    const [sz, m, n] = k.split(':');
+    if (sz === size && +m === murderers) pts.push([+n, v]);
+  }
+  if (!pts.length) return pressureToRules(0.5);
+  pts.sort((a, b) => a[0] - b[0]);
+  if (npcCount <= pts[0][0]) return pressureToRules(pts[0][1]);
+  for (let i = 1; i < pts.length; i++) {
+    if (npcCount <= pts[i][0]) {
+      const t = (npcCount - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]);
+      return pressureToRules(pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t);
+    }
+  }
+  return pressureToRules(pts[pts.length - 1][1]);
+}

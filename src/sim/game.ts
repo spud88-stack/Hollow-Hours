@@ -89,7 +89,7 @@ export interface GameEvent {
   what?: string;
 }
 
-export const KILL_RANGE = 1.25;
+export const KILL_RANGE = 1.5;
 export const USE_RANGE = 1.3;
 export const REPORT_RANGE = 2.4;
 export const SPEED = 3.7;
@@ -234,8 +234,11 @@ export class Game {
       .filter((t) => t !== hub.cy * m.w + hub.cx)
       .map((t) => ({ x: (t % m.w) + 0.5, y: Math.floor(t / m.w) + 0.5 }))
       .sort((a, b) => Math.hypot(a.x - hub.cx - 0.5, a.y - hub.cy - 0.5) - Math.hypot(b.x - hub.cx - 0.5, b.y - hub.cy - 0.5));
+    // Prefer a loose checkerboard so people are not standing on each other's toes.
+    const spaced = tiles.filter((t) => (Math.floor(t.x) + Math.floor(t.y)) % 2 === 0);
+    const pool = spaced.length >= n ? spaced : tiles;
     const out: { x: number; y: number }[] = [];
-    for (let i = 0; i < n; i++) out.push(tiles[i % tiles.length]);
+    for (let i = 0; i < n; i++) out.push(pool[i % pool.length]);
     return out;
   }
 

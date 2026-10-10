@@ -287,7 +287,7 @@ export function onPerceive(g: Game, c: Char): void {
   for (const id of c.visibleBodies) {
     if (b.ignore.has(id)) continue;
     const body = g.bodies[id];
-    if (c.role === 'jester' && rng.chance(0.25)) {
+    if (c.role === 'jester' && rng.chance(0.15)) {
       b.ignore.add(id);
       c.action = null;
       b.goal = goal('body', Math.floor(body.x), Math.floor(body.y), { body: id, act: 'lurk' });

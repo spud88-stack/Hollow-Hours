@@ -143,8 +143,9 @@ if (flag('sweep')) {
     ['lodge', { theme: 'lodge' }],
     ['no specials', { roleCounts: { detective: 0, medic: 0, vigilante: 0, engineer: 0, lookout: 0, magistrate: 0, jester: 0 }, murdererVariants: false }],
     ['all specials x2', { npcCount: 16, roleCounts: { detective: 2, medic: 2, vigilante: 2, engineer: 2, lookout: 2, magistrate: 2, jester: 1 } }],
-    ['fast kills', { killCooldown: 12 }],
-    ['slow kills many tasks', { killCooldown: 50, tasks: 9 }],
+    ['fast kills', { killCooldown: 12, autoBalance: false }],
+    ['slow kills many tasks', { killCooldown: 50, tasks: 9, autoBalance: false }],
+    ['manual 25s / 7 chores', { killCooldown: 25, tasks: 7, autoBalance: false }],
     ['short sight', { vision: 4 }],
     ['long sight', { vision: 11 }],
   ];
@@ -160,6 +161,7 @@ if (flag('sweep')) {
     killCooldown: +arg('cooldown', String(base.killCooldown)),
     tasks: +arg('tasks', String(base.tasks)),
     vision: +arg('vision', String(base.vision)),
+    autoBalance: !(args.includes('--cooldown') || args.includes('--tasks')),
   };
   batch(arg('label', 'run'), s, n, flag('verbose'));
 }
