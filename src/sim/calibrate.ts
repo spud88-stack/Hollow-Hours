@@ -1,11 +1,12 @@
 // Finds, for each crowd size / murderer count / map size, the kill cooldown and chore count
 // at which murderers win roughly 38% of all-AI rounds. Output feeds BALANCE in defs.ts.
-//   npx tsx src/sim/calibrate.ts
+//   npx tsx src/sim/calibrate.ts [rounds per test] [small|medium|large]
 import { defaultSettings, maxMurderers, pressureToRules, type MapSize, type Settings } from './defs';
 import { Game } from './game';
 import { autoMeeting } from './meeting';
 
 const N = +(process.argv[2] ?? 80);
+const SIZES = (process.argv[3] ? [process.argv[3]] : ['small', 'medium', 'large']) as MapSize[];
 const TARGET = 0.38;
 
 function murderRate(s: Settings, label: string): number {
@@ -23,7 +24,7 @@ function murderRate(s: Settings, label: string): number {
 }
 
 const out: Record<string, number> = {};
-for (const size of ['small', 'medium', 'large'] as MapSize[]) {
+for (const size of SIZES) {
   for (const npc of [3, 5, 7, 9, 11, 14, 17, 20]) {
     for (let m = 1; m <= maxMurderers(npc + 1); m++) {
       let lo = 0;

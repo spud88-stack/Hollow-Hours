@@ -1078,3 +1078,15 @@ em.lie,
     grid-template-columns: 1fr;
   }
 }
+
+* {
+  scrollbar-color: #3a3f4e transparent;
+  scrollbar-width: thin;
+}
+
+.note.odds {
+  color: #b9c7d9;
+}
+.note.odds.warn {
+  color: #ffbf7a;
+}

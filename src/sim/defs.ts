@@ -153,6 +153,19 @@ export function maxMurderers(total: number): number {
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, Number.isFinite(v) ? v : a));
 
+/** Special roles can never outnumber the non-murderers; always leave at least one plain guest. */
+function trimRoles(counts: Record<string, number>, total: number, murderers: number): Record<string, number> {
+  const out: Record<string, number> = {};
+  let room = total - murderers - 1;
+  for (const r of [...CIV_SPECIALS, 'jester']) {
+    const max = r === 'jester' ? 1 : 2;
+    const n = Math.round(clamp(counts[r] ?? 0, 0, max));
+    out[r] = Math.min(n, Math.max(0, room));
+    room -= out[r];
+  }
+  return out;
+}
+
 /** Clamp everything into a legal combination. Returns a new object. */
 export function sanitizeSettings(s: Settings): Settings {
   const d = defaultSettings();
@@ -160,20 +173,13 @@ export function sanitizeSettings(s: Settings): Settings {
   o.npcCount = Math.round(clamp(o.npcCount, 3, 20));
   const total = o.npcCount + 1;
   o.murderers = Math.round(clamp(o.murderers, 1, maxMurderers(total)));
-  if (o.autoBalance) Object.assign(o, recommendedRules(o.npcCount, o.murderers, o.size));
   o.killCooldown = clamp(o.killCooldown, 10, 60);
   o.vision = clamp(o.vision, 4, 11);
-  o.tasks = Math.round(clamp(o.tasks, 2, 9));
+  o.tasks = Math.round(clamp(o.tasks, 2, 14));
   o.discussTime = Math.round(clamp(o.discussTime, 0, 120));
   o.voteTime = Math.round(clamp(o.voteTime, 0, 120));
-  // Special roles can never outnumber the non-murderers; always leave at least one plain guest.
-  let room = total - o.murderers - 1;
-  for (const r of [...CIV_SPECIALS, 'jester']) {
-    const max = r === 'jester' ? 1 : 2;
-    const n = Math.round(clamp(o.roleCounts[r] ?? 0, 0, max));
-    o.roleCounts[r] = Math.min(n, Math.max(0, room));
-    room -= o.roleCounts[r];
-  }
+  o.roleCounts = trimRoles(o.roleCounts, total, o.murderers);
+  if (o.autoBalance) Object.assign(o, recommendedRules(o.npcCount, o.murderers, o.size, o.roleCounts));
   if (!['easy', 'normal', 'hard'].includes(o.difficulty)) o.difficulty = 'normal';
   if (!['small', 'medium', 'large'].includes(o.size)) o.size = 'medium';
   if (!['random', 'manor', 'station', 'ship', 'lodge'].includes(o.theme)) o.theme = 'random';
@@ -226,32 +232,122 @@ export const DIFFICULTY: Record<Difficulty, DifficultyTuning> = {
 };
 
 /**
- * One dial for how hard the house leans on the guests: 0 is gentle (slow kills, few chores),
- * 1 is brutal (fast kills, many chores). Used by auto-balance.
+ * One dial for how hard the house leans on the guests, used by auto-balance. From 0 to 0.5 the
+ * kill cooldown falls from 60s to 30s and chores rise from 3 to 7. Past 0.5 the cooldown barely
+ * moves (very fast kills just get murderers caught sooner) and the chore list grows to 14, which
+ * is what actually buys murderers time in a big crowd.
  */
 export function pressureToRules(x: number): { killCooldown: number; tasks: number } {
   const v = Math.max(0, Math.min(1, x));
-  return { killCooldown: Math.round(60 - 50 * v), tasks: Math.max(2, Math.min(9, Math.round(3 + 8 * v))) };
+  if (v < 0.5) return { killCooldown: Math.round(60 - 60 * v), tasks: Math.round(3 + 8 * v) };
+  return { killCooldown: Math.round(30 - 8 * (v - 0.5)), tasks: Math.round(7 + 14 * (v - 0.5)) };
 }
 
-// Pressure values found by src/sim/calibrate.ts (all-AI rounds, murderers winning ~38%).
-// Keys are size:murderers:npcCount.
-export const BALANCE: Record<string, number> = {};
+// Found by src/sim/calibrate.ts: all-AI rounds, searching for the pressure at which murderers win
+// about 38%. Keys are size:murderers:npcCount. Where even the extreme setting cannot get there
+// (one murderer against a crowd, say) the entry records how lopsided it stays.
+// Each entry is [pressure, murderers' win % measured at that pressure].
+export const BALANCE: Record<string, [number, number]> = {
+  'small:1:3': [0.08, 45],
+  'small:1:5': [0.42, 23],
+  'small:1:7': [0.98, 25],
+  'small:2:7': [0.17, 32],
+  'small:1:9': [0.98, 22],
+  'small:2:9': [0.33, 42],
+  'small:3:9': [0.02, 62],
+  'small:1:11': [0.98, 7],
+  'small:2:11': [0.73, 32],
+  'small:3:11': [0.17, 23],
+  'small:1:14': [0.98, 0],
+  'small:2:14': [0.98, 10],
+  'small:3:14': [0.52, 42],
+  'small:1:17': [0.98, 0],
+  'small:2:17': [0.98, 3],
+  'small:3:17': [0.98, 32],
+  'small:1:20': [0.98, 0],
+  'small:2:20': [0.98, 0],
+  'small:3:20': [0.98, 15],
+  'medium:1:3': [0.05, 27],
+  'medium:1:5': [0.42, 30],
+  'medium:1:7': [0.61, 23],
+  'medium:2:7': [0.08, 43],
+  'medium:1:9': [0.98, 23],
+  'medium:2:9': [0.3, 27],
+  'medium:3:9': [0.02, 57],
+  'medium:1:11': [0.98, 7],
+  'medium:2:11': [0.58, 43],
+  'medium:3:11': [0.08, 42],
+  'medium:1:14': [0.98, 5],
+  'medium:2:14': [0.98, 32],
+  'medium:3:14': [0.36, 35],
+  'medium:1:17': [0.98, 0],
+  'medium:2:17': [0.98, 7],
+  'medium:3:17': [0.89, 47],
+  'medium:1:20': [0.98, 0],
+  'medium:2:20': [0.98, 3],
+  'medium:3:20': [0.98, 18],
+  'large:1:3': [0.05, 33],
+  'large:1:5': [0.39, 40],
+  'large:1:7': [0.8, 32],
+  'large:2:7': [0.05, 27],
+  'large:1:9': [0.98, 33],
+  'large:2:9': [0.27, 43],
+  'large:3:9': [0.02, 62],
+  'large:1:11': [0.98, 22],
+  'large:2:11': [0.55, 33],
+  'large:3:11': [0.02, 40],
+  'large:1:14': [0.98, 7],
+  'large:2:14': [0.92, 28],
+  'large:3:14': [0.27, 42],
+  'large:1:17': [0.98, 2],
+  'large:2:17': [0.98, 17],
+  'large:3:17': [0.55, 28],
+  'large:1:20': [0.98, 0],
+  'large:2:20': [0.98, 5],
+  'large:3:20': [0.98, 33],
+};
 
-export function recommendedRules(npcCount: number, murderers: number, size: MapSize): { killCooldown: number; tasks: number } {
-  const pts: [number, number][] = [];
+function balancePoint(npcCount: number, murderers: number, size: MapSize): [number, number] {
+  const pts: [number, number, number][] = [];
   for (const [k, v] of Object.entries(BALANCE)) {
     const [sz, m, n] = k.split(':');
-    if (sz === size && +m === murderers) pts.push([+n, v]);
+    if (sz === size && +m === murderers) pts.push([+n, v[0], v[1]]);
   }
-  if (!pts.length) return pressureToRules(0.5);
+  if (!pts.length) return [0.5, 38];
   pts.sort((a, b) => a[0] - b[0]);
-  if (npcCount <= pts[0][0]) return pressureToRules(pts[0][1]);
+  if (npcCount <= pts[0][0]) return [pts[0][1], pts[0][2]];
   for (let i = 1; i < pts.length; i++) {
     if (npcCount <= pts[i][0]) {
       const t = (npcCount - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]);
-      return pressureToRules(pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t);
+      return [pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t, pts[i - 1][2] + (pts[i][2] - pts[i - 1][2]) * t];
     }
   }
-  return pressureToRules(pts[pts.length - 1][1]);
+  const last = pts[pts.length - 1];
+  return [last[1], last[2]];
+}
+
+// How many points of murderer win rate one copy of each role costs them (measured one role at a
+// time at default settings). The table above was built with the default role mix, so auto-balance
+// shifts the dial by the difference: a house with no Medic or Detective gets gentler rules.
+const ROLE_WEIGHT: Record<string, number> = { detective: 14, medic: 22, vigilante: 0, engineer: 4, lookout: 5, magistrate: 2, jester: 7 };
+const POINTS_PER_PRESSURE = 150;
+const ROLE_OVERLAP = 0.77; // roles together help a bit less than the sum of each alone
+
+function roleShift(npcCount: number, murderers: number, roleCounts: Record<string, number>): number {
+  const score = (rc: Record<string, number>) => Object.entries(rc).reduce((a, [r, n]) => a + (ROLE_WEIGHT[r] ?? 0) * n, 0);
+  const ref = trimRoles(defaultSettings().roleCounts, npcCount + 1, murderers);
+  return ((score(roleCounts) - score(ref)) * ROLE_OVERLAP) / POINTS_PER_PRESSURE;
+}
+
+export function recommendedRules(npcCount: number, murderers: number, size: MapSize, roleCounts: Record<string, number>): { killCooldown: number; tasks: number } {
+  return pressureToRules(balancePoint(npcCount, murderers, size)[0] + roleShift(npcCount, murderers, roleCounts));
+}
+
+/** Roughly how often murderers win all-AI test rounds with the auto-balanced rules for this crowd. */
+export function testedMurderOdds(npcCount: number, murderers: number, size: MapSize, roleCounts: Record<string, number>): number {
+  const [x, odds] = balancePoint(npcCount, murderers, size);
+  const want = x + roleShift(npcCount, murderers, roleCounts);
+  // If the dial ran out of travel, whatever it could not absorb shows up in the odds.
+  const overflow = want - Math.max(0, Math.min(1, want));
+  return Math.round(Math.max(0, Math.min(100, odds - overflow * POINTS_PER_PRESSURE)));
 }

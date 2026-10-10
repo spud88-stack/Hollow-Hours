@@ -34,6 +34,7 @@ interface MT {
   basis: Map<number, Reason>;
   said: Set<string>;
   defended: boolean;
+  heard: Map<number, number>; // circumstantial accusations heard per target: each repeat counts for less
 }
 
 export interface Meeting {
@@ -152,7 +153,7 @@ export function createMeeting(g: Game, reporter: number, body: Body | null): Mee
     votes: new Int16Array(n).fill(-2),
     result: null,
   };
-  for (let i = 0; i < n; i++) m.mt.push({ myRegion: -1, alibi: new Map(), scene: new Set(), withV: new Set(), nearBody: new Set(), caught: new Map(), falseAboutMe: new Map(), basis: new Map(), said: new Set(), defended: false });
+  for (let i = 0; i < n; i++) m.mt.push({ myRegion: -1, alibi: new Map(), scene: new Set(), withV: new Set(), nearBody: new Set(), caught: new Map(), falseAboutMe: new Map(), basis: new Map(), said: new Set(), defended: false, heard: new Map() });
 
   if (body) {
     const ago = Math.max(1, Math.round((g.time - body.t) / 5) * 5);
@@ -332,6 +333,12 @@ function hear(g: Game, m: Meeting, L: Char, s: Stmt): void {
   const add = (id: number, v: number) => {
     if (judge && mem.sure[id] === 0) mem.susp[id] += v;
   };
+  // Five people repeating "they were nearby" is not five times the evidence.
+  const echo = (id: number) => {
+    const k = mt.heard.get(id) ?? 0;
+    mt.heard.set(id, k + 1);
+    return Math.pow(0.5, k);
+  };
 
   switch (s.kind) {
     case 'accuse':
@@ -343,11 +350,11 @@ function hear(g: Game, m: Meeting, L: Char, s: Stmt): void {
         if (s.reason === 'witness' && m.kind === 'body' && (s.victim ?? m.victim) === m.victim && mt.alibi.has(t)) add(by, 2.5 * ownW);
         else add(t, 2.6 * trust);
       } else if (s.reason === 'hunch' || s.reason === 'agree') {
-        add(t, 0.35 * trust * (1 + (pers?.bandwagon ?? 0)));
+        add(t, 0.35 * trust * (1 + (pers?.bandwagon ?? 0)) * echo(t));
       } else if (mt.alibi.has(t) && s.reason === 'scene') {
         add(by, 0.9);
       } else {
-        add(t, 0.9 * trust);
+        add(t, 0.9 * trust * echo(t));
       }
       break;
     case 'defend':

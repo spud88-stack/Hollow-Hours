@@ -1,6 +1,6 @@
 // DOM user interface: menu, role reveal, HUD, meetings, recap.
 import { sfx } from './audio';
-import { CIV_SPECIALS, ROLES, defaultSettings, maxMurderers, sanitizeSettings, type RoleId, type Settings } from './sim/defs';
+import { CIV_SPECIALS, ROLES, defaultSettings, maxMurderers, sanitizeSettings, testedMurderOdds, type RoleId, type Settings } from './sim/defs';
 import type { Char, Game, GameEvent } from './sim/game';
 import { finishMeeting, playerOptions, playerSay, runVote, specIsLie, step, type Meeting, type PlayerOptions, type PlayerSpec, type Reason, type Stmt } from './sim/meeting';
 import { THEMES } from './sim/themes';
@@ -98,6 +98,10 @@ export class UI {
       const total = s.npcCount + 1;
       const specials = Object.values(s.roleCounts).reduce((a, b) => a + b, 0);
       const plain = total - s.murderers - specials;
+      const odds = testedMurderOdds(s.npcCount, s.murderers, s.size, s.roleCounts);
+      const oddsText =
+        `In all-AI test rounds of this setup the murderers won about ${odds}% of the time.` +
+        (odds < 20 ? ' They are long shots here: add a murderer or trim the guest list for a closer fight.' : odds > 60 ? ' The guests are long shots here: add guests or remove a murderer for a closer fight.' : '');
       const set = (fn: (s: Settings) => void) => () => {
         fn(s);
         render();
@@ -205,8 +209,9 @@ export class UI {
                 h('span', {}, 'Auto-balance for this crowd'),
               ),
               num('Kill cooldown', s.killCooldown, 10, 60, 1, (v) => ((s.killCooldown = v), (s.autoBalance = false)), (v) => `${v}s`),
-              num('Chores per guest', s.tasks, 2, 9, 1, (v) => ((s.tasks = v), (s.autoBalance = false))),
+              num('Chores per guest', s.tasks, 2, 14, 1, (v) => ((s.tasks = v), (s.autoBalance = false))),
               h('p', { class: 'note' }, s.autoBalance ? 'These two follow the guest list. Move either slider to take manual control.' : 'Manual rules. Tick auto-balance to go back to tested values.'),
+              s.autoBalance ? h('p', { class: `note odds ${odds < 20 || odds > 60 ? 'warn' : ''}` }, oddsText) : null,
               num('Vision range', s.vision, 4, 11, 0.5, (v) => (s.vision = v), (v) => `${v} tiles`),
               num('Time to speak', s.discussTime, 0, 120, 5, (v) => (s.discussTime = v), (v) => (v ? `${v}s` : 'no limit')),
               num('Time to vote', s.voteTime, 0, 120, 5, (v) => (s.voteTime = v), (v) => (v ? `${v}s` : 'no limit')),

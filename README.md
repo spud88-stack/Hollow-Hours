@@ -22,9 +22,9 @@ Other commands:
 | --- | --- |
 | `npm run build` | Typecheck and produce a static build in `dist/` |
 | `npm run sim -- --n 300` | Play 300 all-AI rounds headlessly and print win rates |
-| `npm run sim -- --sweep --n 150` | The same across 19 different setting combinations |
+| `npm run sim -- --sweep --n 150` | The same across 20 different setting combinations |
 | `npm run sim -- --n 1 --verbose` | Print one whole round, including every meeting transcript |
-| `npx tsx src/sim/calibrate.ts` | Recompute the auto-balance table (slow) |
+| `npx tsx src/sim/calibrate.ts 60 medium` | Recompute one map size of the auto-balance table (slow) |
 
 ## Controls
 
@@ -79,14 +79,17 @@ Library when one of them watched you leave the Kitchen and they will say so.
 ## Settings
 
 NPC count (3-20), murderers (1-3, limited by head count), how many of each special role, map
-theme and size, map seed, kill cooldown, vision range, chores per guest, speaking and voting
+theme and size, map seed, kill cooldown, vision range, chores per guest (2-14), speaking and voting
 timers, NPC sharpness, preferred role, and whether roles are revealed on ejection. Invalid
 combinations are clamped (for example three murderers need at least ten people). Settings are
 remembered in the browser.
 
 **Auto-balance** (on by default) sets the kill cooldown and chore count from a table measured with
-all-AI rounds, so that 4-player and 21-player games are both winnable by either side. Moving either
-slider switches to manual.
+all-AI rounds (`src/sim/calibrate.ts`), adjusted for which special roles are in play, aiming for
+murderers to win a bit under 40% of the time. The menu shows the tested odds for the current setup
+and warns when it is lopsided. That happens when there are too few murderers for the crowd: one
+murderer against eleven or more guests almost never wins, and 21 people really want all three.
+Moving either slider switches to manual.
 
 **Seeds**: leave the seed blank for a new house every round. The seed used is shown on the role
 card and the recap; typing it back in with the same settings rebuilds the same house and deals the

@@ -552,6 +552,17 @@ export class Renderer {
       ctx.arc(x, y - r * 1.9, r * 0.38, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.05, Math.min(1, t)));
       ctx.stroke();
     }
+    // someone who has just spotted a body and is running to report it
+    if (c.brain?.goal?.kind === 'body' && c.brain.goal.act === 'report') {
+      ctx.font = `900 ${Math.round(r * 1.5)}px system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeText('!', x + r * 1.1, y - r * 1.6);
+      ctx.fillStyle = '#ff5b5b';
+      ctx.fillText('!', x + r * 1.1, y - r * 1.6);
+    }
     // the medic can see their own ward
     if (p && p.alive && p.role === 'medic' && p.wardTarget === c.id) {
       ctx.strokeStyle = `rgba(126,224,200,${0.5 + 0.3 * Math.sin(this.time * 4)})`;
