@@ -7,7 +7,11 @@ they personally witnessed, so what you tell them matters, whether or not it is t
 
 Everything is drawn and synthesized in code: there are no image or audio files.
 
-## Run it
+## Play it
+
+**[Play Hollow Hours in your browser](https://spud88-stack.github.io/Hollow-Hours/)**. Nothing to install.
+
+## Run it locally
 
 ```bash
 npm install
@@ -21,6 +25,7 @@ Other commands:
 | Command | What it does |
 | --- | --- |
 | `npm run build` | Typecheck and produce a static build in `dist/` |
+| `npm run deploy` | Build and publish to the `gh-pages` branch, which updates the playable link |
 | `npm run sim -- --n 300` | Play 300 all-AI rounds headlessly and print win rates |
 | `npm run sim -- --sweep --n 150` | The same across 20 different setting combinations |
 | `npm run sim -- --n 1 --verbose` | Print one whole round, including every meeting transcript |
